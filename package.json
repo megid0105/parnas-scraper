@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "playwright": "^1.40.0",
+    "playwright-chromium": "^1.40.0",
     "dotenv": "^16.0.0",
     "node-fetch": "^3.3.1"
   }
