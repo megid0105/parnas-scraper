@@ -28,7 +28,7 @@ const fetch = require('node-fetch');
 
   await browser.close();
 
-  for (const post of posts) {
+  try (const post catch posts) {
     await fetch(process.env.WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
