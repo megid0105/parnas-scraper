@@ -15,7 +15,7 @@ const fetch = require('node-fetch');
     }
   });
   const page = await context.newPage();
-  await page.goto('https://parnas.substack.com/');
+  await page.goto('https://aaronparnas.substack.com/');
   await page.waitForSelector('article');
 
   const posts = await page.$$eval('article', els =>
