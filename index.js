@@ -1,54 +1,30 @@
 require('dotenv').config();
-const { chromium } = require('playwright-chromium');
 const fetch = require('node-fetch');
+const xml2js = require('xml2js');
 
 (async () => {
   try {
-    const browser = await chromium.launch();
-    const context = await browser.newContext({
-      storageState: {
-        cookies: [
-          {
-            name: 'sid',
-            value: process.env.SUBSTACK_SID,
-            domain: '.substack.com',
-            path: '/',
-          },
-        ],
-      },
-    });
-    const page = await context.newPage();
-    await page.goto('https://aaronparnas.substack.com/');
-    await page.waitForSelector('article');
+    // fetch the feed
+    const res = await fetch('https://aaronparnas.substack.com/feed');
+    const xml = await res.text();
 
-    // scrape all <article> elements
-    const posts = await page.$$eval('article', (els) =>
-      els.map((el) => ({
-        title: el.querySelector('h1')?.innerText,
-        url: el.querySelector('a')?.href,
-        date: el.querySelector('time')?.dateTime,
-      }))
-    );
+    // parse it
+    const { rss } = await xml2js.parseStringPromise(xml, { explicitArray: false });
+    const items = rss.channel.item instanceof Array
+      ? rss.channel.item
+      : [rss.channel.item];
 
-    await browser.close();
-
-    // properly iterate and POST each item
-    for (const post of posts) {
-      try {
-        const res = await fetch(process.env.WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(post),
-        });
-        console.log(
-          `Posted "${post.title}" → ${res.status} ${res.statusText}`
-        );
-      } catch (err) {
-        console.error('Error posting to webhook:', err);
-      }
+    // push into n8n
+    for (const { title, link, pubDate } of items) {
+      await fetch(process.env.WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, url: link, date: pubDate }),
+      });
+      console.log(`→ posted: ${title}`);
     }
   } catch (err) {
-    console.error('Scraper failed:', err);
+    console.error('Scraper error:', err);
     process.exit(1);
   }
 })();
