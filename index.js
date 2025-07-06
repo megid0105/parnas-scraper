@@ -1,27 +1,26 @@
 require('dotenv').config();
-const fetch = require('node-fetch');
-const xml2js = require('xml2js');
+const { parseStringPromise } = require('xml2js');
 
 (async () => {
   try {
-    // fetch the feed
+    // 1) fetch Substack’s RSS
     const res = await fetch('https://aaronparnas.substack.com/feed');
     const xml = await res.text();
 
-    // parse it
-    const { rss } = await xml2js.parseStringPromise(xml, { explicitArray: false });
-    const items = rss.channel.item instanceof Array
+    // 2) parse it
+    const { rss } = await parseStringPromise(xml, { explicitArray: false });
+    const items = Array.isArray(rss.channel.item)
       ? rss.channel.item
       : [rss.channel.item];
 
-    // push into n8n
+    // 3) POST each to your n8n webhook
     for (const { title, link, pubDate } of items) {
       await fetch(process.env.WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, url: link, date: pubDate }),
       });
-      console.log(`→ posted: ${title}`);
+      console.log('→ posted:', title);
     }
   } catch (err) {
     console.error('Scraper error:', err);
