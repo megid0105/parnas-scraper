@@ -2,12 +2,9 @@ services:
   - type: web
     name: parnas-scraper
     env: node
-    region: oregon
     branch: main
     buildCommand: npm install
     startCommand: node index.js
     envVars:
-      - key: SUBSTACK_SID
-        fromSecret: SUBSTACK_SID
       - key: WEBHOOK_URL
         fromSecret: WEBHOOK_URL
